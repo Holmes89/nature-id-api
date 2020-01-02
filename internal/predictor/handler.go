@@ -33,6 +33,7 @@ func MakeV1Handler(mr *mux.Router, service Service) http.Handler {
 func (h *handler) Predict(w http.ResponseWriter, r *http.Request) {
 
 	//TODO check extenstion (jpg)
+	logrus.Info("received prediction request")
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		h.makeError(w, http.StatusBadRequest, "Unable to parse form: "+err.Error(), "create")
@@ -42,13 +43,6 @@ func (h *handler) Predict(w http.ResponseWriter, r *http.Request) {
 		h.makeError(w, http.StatusBadRequest, "File missing from form", "create")
 		return
 	}
-
-	//get file
-	if err != nil {
-		h.makeError(w, http.StatusInternalServerError, err.Error(), "predict")
-		return
-	}
-
 	logrus.Info("starting prediction")
 	labels, err := h.service.GetLabels(file)
 	if err != nil {

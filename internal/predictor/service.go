@@ -24,6 +24,7 @@ type Service interface {
 type tfService struct {
 	labelMap map[int]*Label
 	graph    *tensorflow.Graph
+	session *tensorflow.Session
 }
 
 func NewTensorflowService() (Service, error) {
@@ -38,6 +39,14 @@ func NewTensorflowService() (Service, error) {
 		return nil, err
 	}
 
+	// Create a session for inference over modelGraph
+
+	if err := s.createSession(); err != nil {
+		logrus.WithField("err", err).Error("unable to create session")
+		return nil, err
+	}
+
+	logrus.Info("service created")
 	return s, nil
 }
 
@@ -49,13 +58,8 @@ func (s *tfService) GetLabels(img io.ReadCloser) (Labels, error) {
 		log.Fatalf("unable to make a tensor from image: %v", err)
 	}
 
-	// Create a session for inference over modelGraph
-	session, err := tensorflow.NewSession(s.graph, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	output, err := session.Run(
+	logrus.Info("predicting")
+	output, err := s.session.Run(
 		map[tensorflow.Output]*tensorflow.Tensor{
 			s.graph.Operation("image_tensor").Output(0): tensor,
 		},
@@ -108,6 +112,7 @@ func (s *tfService) loadLabelMap() error {
 	for _, l := range labels {
 		s.labelMap[l.ID] = l
 	}
+	logrus.Info("label map created")
 	return nil
 }
 
@@ -121,13 +126,25 @@ func (s *tfService) loadGraph() error {
 	if err := s.graph.Import(model, ""); err != nil {
 		return err
 	}
+	logrus.Info("graph loaded")
 	return nil
 }
+
+func (s *tfService) createSession() error {
+	session, err := tensorflow.NewSession(s.graph, nil)
+	if err != nil {
+		return err
+	}
+	s.session = session
+	logrus.Info("session created")
+	return nil
+}
+
 
 func (s *tfService) normalizeImage(body io.ReadCloser) (*tensorflow.Tensor, error) {
 	var buf bytes.Buffer
 	io.Copy(&buf, body)
-
+	logrus.Info("normalizing image")
 	tensor, err := tensorflow.NewTensor(buf.String())
 	if err != nil {
 		return nil, err
@@ -156,6 +173,7 @@ func (s *tfService) normalizeImage(body io.ReadCloser) (*tensorflow.Tensor, erro
 		return nil, err
 	}
 
+	logrus.Info("image normalized")
 	return normalized[0], nil
 }
 
