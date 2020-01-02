@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 )
 
 const (
@@ -58,6 +59,7 @@ func (s *tfService) GetLabels(img io.ReadCloser) (Labels, error) {
 		log.Fatalf("unable to make a tensor from image: %v", err)
 	}
 
+	now := time.Now()
 	logrus.Info("predicting")
 	output, err := s.session.Run(
 		map[tensorflow.Output]*tensorflow.Tensor{
@@ -73,6 +75,8 @@ func (s *tfService) GetLabels(img io.ReadCloser) (Labels, error) {
 	if err != nil {
 		return nil, err
 	}
+	processedTime := time.Now().Sub(now)
+	logrus.WithField("time", processedTime.String()).Info("predicting complete")
 	scores := output[0].Value().([][]float32)[0] //Maps to above tensorflow output detection_scores
 	ids := output[1].Value().([][]float32)[0]    //Maps to above tensorflow output detection_classes
 
