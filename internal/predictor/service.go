@@ -116,30 +116,6 @@ func (s *tfService) loadLabelMap() error {
 	return nil
 }
 
-func (s *tfService) loadGraph() error {
-	// Load inception model
-	model, err := ioutil.ReadFile(graphFile)
-	if err != nil {
-		return err
-	}
-	s.graph = tensorflow.NewGraph()
-	if err := s.graph.Import(model, ""); err != nil {
-		return err
-	}
-	logrus.Info("graph loaded")
-	return nil
-}
-
-func (s *tfService) createSession() error {
-	session, err := tensorflow.NewSession(s.graph, nil)
-	if err != nil {
-		return err
-	}
-	s.session = session
-	logrus.Info("session created")
-	return nil
-}
-
 
 func (s *tfService) normalizeImage(body io.ReadCloser) (*tensorflow.Tensor, error) {
 	var buf bytes.Buffer
