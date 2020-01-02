@@ -35,17 +35,13 @@ func NewTensorflowService() (Service, error) {
 		return nil, err
 	}
 
-	if err := s.loadGraph(); err != nil {
-		logrus.WithField("err", err).Error("unable to load graph")
+	model, err := tensorflow.LoadSavedModel("./nature-model/saved_model", []string{"serve"}, nil)
+	if err != nil {
+		logrus.Error("unable to load model")
 		return nil, err
 	}
-
-	// Create a session for inference over modelGraph
-
-	if err := s.createSession(); err != nil {
-		logrus.WithField("err", err).Error("unable to create session")
-		return nil, err
-	}
+	s.session = model.Session
+	s.graph = model.Graph
 
 	logrus.Info("service created")
 	return s, nil
