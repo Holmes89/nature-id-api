@@ -19,7 +19,7 @@ const (
 )
 
 type Service interface {
-	GetLabels(img io.ReadCloser) (Labels, error)
+	GetLabels(img io.Reader) (Labels, error)
 }
 
 type tfService struct {
@@ -47,7 +47,7 @@ func NewTensorflowService() (Service, error) {
 	return s, nil
 }
 
-func (s *tfService) GetLabels(img io.ReadCloser) (Labels, error) {
+func (s *tfService) GetLabels(img io.Reader) (Labels, error) {
 
 	// Get normalized tensor
 	tensor, err := s.normalizeImage(img)
@@ -117,7 +117,7 @@ func (s *tfService) loadLabelMap() error {
 }
 
 
-func (s *tfService) normalizeImage(body io.ReadCloser) (*tensorflow.Tensor, error) {
+func (s *tfService) normalizeImage(body io.Reader) (*tensorflow.Tensor, error) {
 	var buf bytes.Buffer
 	io.Copy(&buf, body)
 	logrus.Info("normalizing image")

@@ -6,6 +6,7 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/tensorflow/tensorflow v2.0.0+incompatible
+	gocv.io/x/gocv v0.22.0 // indirect
 	golang.org/x/crypto v0.0.0-20191227163750-53104e6ec876 // indirect
 	golang.org/x/sys v0.0.0-20200102141924-c96a22e43c9c // indirect
 )
