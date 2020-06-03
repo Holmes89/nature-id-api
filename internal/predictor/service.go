@@ -9,18 +9,10 @@ import (
 	"github.com/tensorflow/tensorflow/tensorflow/go/op"
 	"gocloud.dev/blob"
 	"io"
-	"io/ioutil"
 	"log"
 	"nature-id-api/internal"
-	"os"
 	"time"
 )
-
-const (
-	graphFile = "./models/nature.pb"
-	tagsFile  = "./models/tags.json"
-)
-
 
 type tfService struct {
 	bucket *blob.Bucket
@@ -30,16 +22,17 @@ type tfService struct {
 }
 
 
-func NewTensorflowPredictor(bucket *blob.Bucket) (internal.Predictor, error) {
+func NewTensorflowPredictor(bucket *blob.Bucket, modelPath, labelPath string) (internal.Predictor, error) {
 	s := &tfService{
 		bucket: bucket,
 	}
-	if err := s.loadLabelMap(); err != nil {
+
+	if err := s.loadLabelMap(labelPath); err != nil {
 		logrus.WithField("err", err).Error("unable to load map")
 		return nil, err
 	}
 
-	err := s.loadGraphAndSession("models/faster_rcnn_resnet50_fgvc_2018_07_19.pb")
+	err := s.loadGraphAndSession(modelPath)
 	if err != nil {
 		logrus.Error("unable to load model")
 		return nil, err
@@ -95,16 +88,15 @@ func (s *tfService) Predict(img io.Reader) (internal.Predictions, error) {
 	return labels, nil
 }
 
-func (s *tfService) loadLabelMap() error {
-	tagsFile, err := os.Open(tagsFile)
+func (s *tfService) loadLabelMap(path string) error {
+	logrus.WithField("path", path).Info("downloading labels")
+	labelsBytes, err := s.bucket.ReadAll(context.Background(), path)
 	if err != nil {
 		return err
 	}
-	defer tagsFile.Close()
-
-	byteValue, _ := ioutil.ReadAll(tagsFile)
+	logrus.Info("downloaded labels")
 	var labels []*internal.Prediction
-	if err := json.Unmarshal(byteValue, &labels); err != nil {
+	if err := json.Unmarshal(labelsBytes, &labels); err != nil {
 		log.Fatal("unable to parse tags")
 		return err
 	}
@@ -188,5 +180,6 @@ func (s *tfService) loadGraphAndSession(path string) error {
 	if err != nil {
 		return err
 	}
+	logrus.Info("model created")
 	return nil
 }

@@ -38,7 +38,9 @@ func main() {
 		logrus.WithError(err).Fatal("unable to create bucket")
 	}
 	defer bucket.Close()
-	pred, err := predictor.NewTensorflowPredictor(bucket)
+
+	modelConfig := internal.LoadModelConfig()
+	pred, err := predictor.NewTensorflowPredictor(bucket, modelConfig.GetModelPath(), modelConfig.GetLabelFilePath())
 	if err != nil {
 		logrus.WithField("err", err).Fatal("unable to start service")
 	}
