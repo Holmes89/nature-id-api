@@ -2,13 +2,16 @@ package predictor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/sirupsen/logrus"
 	"github.com/tensorflow/tensorflow/tensorflow/go"
 	"github.com/tensorflow/tensorflow/tensorflow/go/op"
+	"gocloud.dev/blob"
 	"io"
 	"io/ioutil"
 	"log"
+	"nature-id-api/internal"
 	"os"
 	"time"
 )
@@ -18,36 +21,34 @@ const (
 	tagsFile  = "./models/tags.json"
 )
 
-type Service interface {
-	GetLabels(img io.Reader) (Labels, error)
-}
 
 type tfService struct {
-	labelMap map[int]*Label
+	bucket *blob.Bucket
+	labelMap map[int]*internal.Prediction
 	graph    *tensorflow.Graph
 	session *tensorflow.Session
 }
 
-func NewTensorflowService() (Service, error) {
-	s := &tfService{}
+
+func NewTensorflowPredictor(bucket *blob.Bucket) (internal.Predictor, error) {
+	s := &tfService{
+		bucket: bucket,
+	}
 	if err := s.loadLabelMap(); err != nil {
 		logrus.WithField("err", err).Error("unable to load map")
 		return nil, err
 	}
 
-	model, err := tensorflow.LoadSavedModel("./nature-model/saved_model", []string{"serve"}, nil)
+	err := s.loadGraphAndSession("models/faster_rcnn_resnet50_fgvc_2018_07_19.pb")
 	if err != nil {
 		logrus.Error("unable to load model")
 		return nil, err
 	}
-	s.session = model.Session
-	s.graph = model.Graph
-
 	logrus.Info("service created")
 	return s, nil
 }
 
-func (s *tfService) GetLabels(img io.Reader) (Labels, error) {
+func (s *tfService) Predict(img io.Reader) (internal.Predictions, error) {
 
 	// Get normalized tensor
 	tensor, err := s.normalizeImage(img)
@@ -76,7 +77,7 @@ func (s *tfService) GetLabels(img io.Reader) (Labels, error) {
 	scores := output[0].Value().([][]float32)[0] //Maps to above tensorflow output detection_scores
 	ids := output[1].Value().([][]float32)[0]    //Maps to above tensorflow output detection_classes
 
-	var labels Labels
+	var labels internal.Predictions
 
 	for i, sc := range scores {
 		//todo len check
@@ -102,12 +103,12 @@ func (s *tfService) loadLabelMap() error {
 	defer tagsFile.Close()
 
 	byteValue, _ := ioutil.ReadAll(tagsFile)
-	var labels []*Label
+	var labels []*internal.Prediction
 	if err := json.Unmarshal(byteValue, &labels); err != nil {
 		log.Fatal("unable to parse tags")
 		return err
 	}
-	s.labelMap = make(map[int]*Label)
+	s.labelMap = make(map[int]*internal.Prediction)
 
 	for _, l := range labels {
 		s.labelMap[l.ID] = l
@@ -153,7 +154,7 @@ func (s *tfService) normalizeImage(body io.Reader) (*tensorflow.Tensor, error) {
 	return normalized[0], nil
 }
 
-// Creates a graph to decode, rezise and normalize an image
+// Creates a graph to decode, resize and normalize an image
 func (s *tfService) getNormalizedGraph() (graph *tensorflow.Graph, input, output tensorflow.Output, err error) {
 	scope := op.NewScope()
 	input = op.Placeholder(scope, tensorflow.String)
@@ -168,3 +169,24 @@ func (s *tfService) getNormalizedGraph() (graph *tensorflow.Graph, input, output
 	return graph, input, output, err
 }
 
+
+
+func (s *tfService) loadGraphAndSession(path string) error {
+	// Load Model from bucket
+	// TODO load labels and models together
+	logrus.WithField("path", path).Info("downloading model")
+	model, err := s.bucket.ReadAll(context.Background(), path)
+	if err != nil {
+		return err
+	}
+	logrus.Info("downloaded model")
+	s.graph = tensorflow.NewGraph()
+	if err := s.graph.Import(model, ""); err != nil {
+		return err
+	}
+	s.session, err = tensorflow.NewSession(s.graph, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}

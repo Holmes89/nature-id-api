@@ -7,4 +7,9 @@ Download and copy the frozen_inference_graph.pb and name it nature.pb in the mod
 ## Requires
 
 - [Tensorflow C Libraries](https://www.tensorflow.org/install/lang_c)
-- [Go CV](https://github.com/hybridgroup/gocv)
+
+## TODO
+- generalize code
+- better documentation
+- try new inaturalist model 
+- example command and file

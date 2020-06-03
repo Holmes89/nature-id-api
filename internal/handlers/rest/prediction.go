@@ -1,10 +1,11 @@
-package predictor
+package rest
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"nature-id-api/internal"
 	"net/http"
 	"sort"
 	"strings"
@@ -14,10 +15,10 @@ import (
 const baseURL = "/v1/predict"
 
 type handler struct {
-	service    Service
+	service internal.Predictor
 }
 
-func MakeV1Handler(mr *mux.Router, service Service) http.Handler {
+func MakeV1Handler(mr *mux.Router, service internal.Predictor) http.Handler {
 
 	r := mr.PathPrefix(baseURL).Subrouter()
 
@@ -44,14 +45,14 @@ func (h *handler) Predict(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	logrus.Info("starting prediction")
-	labels, err := h.service.GetLabels(file)
+	labels, err := h.service.Predict(file)
 	if err != nil {
 		h.makeError(w, http.StatusInternalServerError, err.Error(), "predict")
 		return
 	}
 	logrus.Info("prediction complete")
 
-	sort.Sort(Labels(labels))
+	sort.Sort(labels)
 	w.WriteHeader(http.StatusCreated)
 	h.encodeResponse(r.Context(), w, labels)
 }

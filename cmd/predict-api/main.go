@@ -5,8 +5,10 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"nature-id-api/internal/env"
+	"nature-id-api/internal"
+	"nature-id-api/internal/handlers/rest"
 	"nature-id-api/internal/predictor"
+	"nature-id-api/internal/storage"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,7 +22,7 @@ const (
 func main() {
 
 	//Create server
-	port := ":" + env.GetEnv("PORT", defaultPort)
+	port := ":" + internal.GetEnv("PORT", defaultPort)
 
 	router := mux.NewRouter()
 
@@ -31,12 +33,17 @@ func main() {
 
 	router.Use(cors, endpointLogging)
 
-	pred, err := predictor.NewTensorflowService()
+	bucket, err := storage.NewGCPBucketStorage(internal.LoadBucketConfig())
+	if err != nil {
+		logrus.WithError(err).Fatal("unable to create bucket")
+	}
+	defer bucket.Close()
+	pred, err := predictor.NewTensorflowPredictor(bucket)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("unable to start service")
 	}
 
-	predictor.MakeV1Handler(router, pred)
+	rest.MakeV1Handler(router, pred)
 
 	errs := make(chan error, 2) // This is used to handle and log the reason why the application quit.
 	go func() {
