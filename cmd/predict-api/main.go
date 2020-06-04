@@ -43,10 +43,14 @@ func main() {
 	}
 	defer bucket.Close()
 
-	redisConn := connection.NewRedisClientDefault()
-	defer redisConn.Close()
+	speciesCache := cache.NewMemoryCache()
+	if os.Getenv("REDIS_URL") != "" {
+		logrus.Info("using redis cache")
+		redisConn := connection.NewRedisClientDefault()
+		defer redisConn.Close()
+		speciesCache = cache.NewRedisCache(redisConn)
+	}
 
-	speciesCache := cache.NewRedisCache(redisConn)
 	clients := []speciesfinder.Client{wolframalpha.NewClient(), wiki.NewClient()}
 	speciesService := speciesfinder.NewSpeciesFinderService(speciesCache, clients)
 
