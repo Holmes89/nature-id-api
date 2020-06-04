@@ -12,7 +12,7 @@ EXPOSE 8080
 COPY . /api
 RUN CGO_ENABLED=1 GOOS=linux go build cmd/predict-api/main.go
 
-FROM debian:sid-slim
+FROM debian:sid-slim AS prod
 WORKDIR /tmp
 RUN apt-get update && apt-get install -y wget  \
     && wget https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-1.15.0.tar.gz \
