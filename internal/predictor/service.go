@@ -63,11 +63,14 @@ func NewTensorflowPredictor(bucket *blob.Bucket, modelPath, labelPath string) (i
 		return nil, err
 	}
 
-	err := s.loadGraphAndSession(modelPath)
-	if err != nil {
-		logrus.Error("unable to load model")
-		return nil, err
-	}
+	go func() {
+		err := s.loadGraphAndSession(modelPath)
+		if err != nil {
+			logrus.Fatal("unable to load model")
+		}
+		logrus.Info("loaded model")
+	}()
+
 	logrus.Info("service created")
 	return s, nil
 }
