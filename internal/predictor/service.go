@@ -49,6 +49,7 @@ type tfService struct {
 	bucket *blob.Bucket
 	labelMap map[int]*internal.Prediction
 	graph    *tensorflow.Graph
+	modelPath string
 	session *tensorflow.Session
 }
 
@@ -56,6 +57,7 @@ type tfService struct {
 func NewTensorflowPredictor(bucket *blob.Bucket, modelPath, labelPath string) (internal.Predictor, error) {
 	s := &tfService{
 		bucket: bucket,
+		modelPath: modelPath,
 	}
 
 	if err := s.loadLabelMap(labelPath); err != nil {
@@ -63,20 +65,19 @@ func NewTensorflowPredictor(bucket *blob.Bucket, modelPath, labelPath string) (i
 		return nil, err
 	}
 
-	go func(serv *tfService) {
-		err := serv.loadGraphAndSession(modelPath)
-		if err != nil {
-			logrus.Fatal("unable to load model")
-		}
-		logrus.Info("loaded model")
-	}(s)
-
 	logrus.Info("service created")
 	return s, nil
 }
 
 func (s *tfService) Predict(img io.Reader) (internal.Predictions, error) {
 
+	if s.graph == nil {
+		err := s.loadGraphAndSession(s.modelPath)
+		if err != nil {
+			logrus.Fatal("unable to load model")
+		}
+		logrus.Info("loaded model")
+	}
 	// Get normalized tensor
 	tensor, err := s.normalizeImage(img)
 	if err != nil {
