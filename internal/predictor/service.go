@@ -63,13 +63,13 @@ func NewTensorflowPredictor(bucket *blob.Bucket, modelPath, labelPath string) (i
 		return nil, err
 	}
 
-	go func() {
-		err := s.loadGraphAndSession(modelPath)
+	go func(serv *tfService) {
+		err := serv.loadGraphAndSession(modelPath)
 		if err != nil {
 			logrus.Fatal("unable to load model")
 		}
 		logrus.Info("loaded model")
-	}()
+	}(s)
 
 	logrus.Info("service created")
 	return s, nil
