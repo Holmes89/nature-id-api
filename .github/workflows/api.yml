@@ -32,4 +32,4 @@ jobs:
         run: "docker push us.gcr.io/${{ secrets.GCLOUD_PROJECT }}/nature-id-api:$(git rev-parse --short HEAD)"
 
       - name: Install beta commands and deploy on cloud run
-        run: "gcloud components install beta --quiet && gcloud beta run deploy nature-id-api --quiet --image us.gcr.io/${{ secrets.GCLOUD_PROJECT }}/nature-id-api:$(git rev-parse --short HEAD) --project ${{ secrets.GCLOUD_PROJECT }} --region us-east1 --platform managed --memory=1Gi --update-env-vars WOLFRAM_KEY={{ secrets.WOLFRAM_KEY}}"
+        run: "gcloud components install beta --quiet && gcloud beta run deploy nature-id-api --quiet --image us.gcr.io/${{ secrets.GCLOUD_PROJECT }}/nature-id-api:$(git rev-parse --short HEAD) --project ${{ secrets.GCLOUD_PROJECT }} --region us-east1 --platform managed --memory=1Gi --update-env-vars WOLFRAM_KEY={{ secrets.WOLFRAM_KEY }}"
